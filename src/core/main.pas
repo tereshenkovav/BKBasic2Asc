@@ -14,7 +14,8 @@ type
 implementation
 uses Generics.Collections, Math ;
 
-const MAINHELP = 'Usage: Basic_filename Asc_filename [parameters]'#13#10+
+const MAINHELP = 'Conveter from Basic for BK-001 to ASC-file for GID emulator'#13#10+
+  'Usage: Basic_filename Asc_filename [parameters]'#13#10+
   'Parameters:'#13#10+
   '/basiccodepage=utf8|win1251|koi8r|oem866 - convert Basic file from codepage' ;
 
@@ -30,9 +31,10 @@ end;
 
 procedure TMain.Run() ;
 var script:TStringList ;
-    s,pname:string ;
+    s,pname,pvalue:string ;
     i,j,p,filecnt,blocksize:Integer ;
-    srcenc,destfile,binfile:string ;
+    destfile,binfile:string ;
+    srcenc:TEncoding ;
     data:TList<Byte> ;
     stm:TFileStream ;
     buf:TBytes ;
@@ -40,17 +42,20 @@ begin
   try
     if ParamCount<1 then ExitWithError(MAINHELP,1) ;
 
-    srcenc:='utf8' ;
+    srcenc:=TEncoding.UTF8 ;
     for i := 3 to ParamCount do begin
       if ParamStr(i)[1]<>'/' then ExitWithError('Unknown argument: '+ParamStr(i)+', use /name=value',2) ;
       p:=ParamStr(i).IndexOf('=') ;
       if p=-1 then ExitWithError('Unknown argument: '+ParamStr(i)+', use /name=value',3) ;
       pname:=ParamStr(i).Substring(1,p-1) ;
       if pname='basiccodepage' then begin
-        srcenc:=ParamStr(i).Substring(p+1).ToLower() ;
-        if (srcenc<>'utf8') and (srcenc<>'win1251') and
-           (srcenc<>'koi8r') and (srcenc<>'oem866')  then
-          ExitWithError('Unknown basiccodepage: '+pname,4) ;
+        pvalue:=ParamStr(i).Substring(p+1).ToLower() ;
+        if (pvalue<>'utf8') and (pvalue<>'win1251') and
+           (pvalue<>'koi8r') and (pvalue<>'oem866')  then
+          ExitWithError('Unknown basiccodepage: '+pvalue,4) ;
+        if pvalue='win1251' then srcenc:=TEncoding.GetEncoding(1251) ;
+        if pvalue='oem866' then srcenc:=TEncoding.GetEncoding(866) ;
+        if pvalue='koi8r' then srcenc:=TEncoding.GetEncoding(20866) ;
       end
       else
         ExitWithError('Unknown parameter: '+pname,5) ;
@@ -68,12 +73,12 @@ begin
 
     Writeln('Reading Basic file...') ;
     script:=TStringList.Create() ;
-    script.LoadFromFile(ParamStr(1),TEncoding.UTF8) ;
+    script.LoadFromFile(ParamStr(1),srcenc) ;
     data:=TList<Byte>.Create() ;
     for s in script do begin
       if s.Trim().Length=0 then Continue ;
       if s.Trim().StartsWith('''') then Continue ;
-      data.AddRange(TEncoding.UTF8.GetBytes(s.Trim())) ;
+      data.AddRange(TEncoding.GetEncoding(20866).GetBytes(s.Trim())) ;
       data.Add($0A) ;
     end;
     data.Add($1A) ;
