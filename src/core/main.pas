@@ -12,7 +12,7 @@ type
   end;
 
 implementation
-uses Generics.Collections ;
+uses Generics.Collections, Math ;
 
 const MAINHELP = 'Usage: Basic_filename Asc_filename [parameters]'#13#10+
   'Parameters:'#13#10+
@@ -20,6 +20,7 @@ const MAINHELP = 'Usage: Basic_filename Asc_filename [parameters]'#13#10+
 
 ASC_NAME_LENGTH = 6 ;
 HEADER_SIZE = 4 ;
+MAX_BLOCK_SIZE = 256 ;
 
 procedure TMain.ExitWithError(const msg: string; code: Integer);
 begin
@@ -30,7 +31,7 @@ end;
 procedure TMain.Run() ;
 var script:TStringList ;
     s,pname:string ;
-    i,p:Integer ;
+    i,j,p,filecnt,blocksize:Integer ;
     srcenc,destfile,binfile:string ;
     data:TList<Byte> ;
     stm:TFileStream ;
@@ -82,20 +83,26 @@ begin
 
     if not destfile.ToLower().EndsWith('.asc') then destfile:=destfile+'.asc' ;
 
-    binfile:=destfile+' #000.bin' ;
-    if FileExists(binfile) then SysUtils.DeleteFile(binfile) ;
+    filecnt:=data.Count div MAX_BLOCK_SIZE ;
+    if data.Count mod MAX_BLOCK_SIZE<>0 then Inc(filecnt) ;
 
-    SetLength(buf,data.Count+HEADER_SIZE) ;
-    buf[0]:=$EE ;
-    buf[1]:=$3D ;
-    buf[2]:=Byte(data.Count) ;
-    buf[3]:=0 ;
-    for i := 0 to data.Count-1 do
-      buf[HEADER_SIZE+i]:=data[i] ;
+    for i := 0 to filecnt-1 do begin
+      binfile:=Format('%s #%.3d.bin',[destfile,i]) ;
+      if FileExists(binfile) then SysUtils.DeleteFile(binfile) ;
 
-    stm:=TFileStream.Create(binfile,fmCreate) ;
-    stm.WriteBuffer(buf[0],Length(buf)) ;
-    stm.Free ;
+      blocksize:=IfThen(i=filecnt-1,data.Count-(filecnt-1)*MAX_BLOCK_SIZE,MAX_BLOCK_SIZE) ;
+      SetLength(buf,blocksize+HEADER_SIZE) ;
+      buf[0]:=$EE ;
+      buf[1]:=$3D ;
+      buf[2]:=Byte(blocksize mod MAX_BLOCK_SIZE) ;
+      buf[3]:=Byte(blocksize div MAX_BLOCK_SIZE) ;
+      for j := 0 to blocksize-1 do
+        buf[HEADER_SIZE+j]:=data[i*MAX_BLOCK_SIZE+j] ;
+      stm:=TFileStream.Create(binfile,fmCreate) ;
+      stm.WriteBuffer(buf[0],Length(buf)) ;
+      stm.Free ;
+
+    end;
 
     binfile:=destfile+'.bin' ;
     if FileExists(binfile) then SysUtils.DeleteFile(binfile) ;
