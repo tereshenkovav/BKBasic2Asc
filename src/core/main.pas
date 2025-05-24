@@ -14,7 +14,7 @@ type
 implementation
 uses Generics.Collections, Math ;
 
-const MAINHELP = 'Conveter from Basic for BK-001 to ASC-file for GID emulator'#13#10+
+const MAINHELP = 'Converter from Basic for BK-0010 to ASC-file for GID emulator'#13#10+
   'Usage: Basic_filename Asc_filename [parameters]'#13#10+
   'Parameters:'#13#10+
   '/basiccodepage=utf8|win1251|koi8r|oem866 - convert Basic file from codepage' ;
