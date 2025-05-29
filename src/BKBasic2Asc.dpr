@@ -3,7 +3,9 @@ program BKBasic2Asc;
 {$APPTYPE CONSOLE}
 
 uses
-  main ;
+  main,
+  LineNumerator in 'core\LineNumerator.pas',
+  Optional in 'core\Optional.pas';
 
 begin
   with TMain.Create() do begin

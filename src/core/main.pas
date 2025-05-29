@@ -12,12 +12,14 @@ type
   end;
 
 implementation
-uses Generics.Collections, Math ;
+uses Generics.Collections, Math, LineNumerator, Optional ;
 
 const MAINHELP = 'Converter from Basic for BK-0010 to ASC-file for GID emulator'#13#10+
   'Usage: Basic_filename Asc_filename [parameters]'#13#10+
   'Parameters:'#13#10+
-  '/basiccodepage=utf8|win1251|koi8r|oem866 - convert Basic file from codepage' ;
+  '/basiccodepage=utf8|win1251|koi8r|oem866 - convert Basic file from codepage'#13#10+
+  '/autonumlines=true|false - set line numbers to non-numbered Basic source'#13#10+
+  '/savepreparedsource=true|false - save cleared and autonumbered (if use) source to .tmp file' ;
 
 ASC_NAME_LENGTH = 6 ;
 HEADER_SIZE = 4 ;
@@ -38,18 +40,23 @@ var script:TStringList ;
     data:TList<Byte> ;
     stm:TFileStream ;
     buf:TBytes ;
+    ln:TLineNumerator ;
+    autonumlines,savepreparedsource:Boolean ;
+    newlines:TOptional<TStringList> ;
 begin
   try
     if ParamCount<1 then ExitWithError(MAINHELP,1) ;
 
     srcenc:=TEncoding.UTF8 ;
+    autonumlines:=False ;
+    savepreparedsource:=False ;
     for i := 3 to ParamCount do begin
       if ParamStr(i)[1]<>'/' then ExitWithError('Unknown argument: '+ParamStr(i)+', use /name=value',2) ;
       p:=ParamStr(i).IndexOf('=') ;
       if p=-1 then ExitWithError('Unknown argument: '+ParamStr(i)+', use /name=value',3) ;
       pname:=ParamStr(i).Substring(1,p-1) ;
+      pvalue:=ParamStr(i).Substring(p+1).ToLower() ;
       if pname='basiccodepage' then begin
-        pvalue:=ParamStr(i).Substring(p+1).ToLower() ;
         if (pvalue<>'utf8') and (pvalue<>'win1251') and
            (pvalue<>'koi8r') and (pvalue<>'oem866')  then
           ExitWithError('Unknown basiccodepage: '+pvalue,4) ;
@@ -57,6 +64,10 @@ begin
         if pvalue='oem866' then srcenc:=TEncoding.GetEncoding(866) ;
         if pvalue='koi8r' then srcenc:=TEncoding.GetEncoding(20866) ;
       end
+      else
+      if pname='autonumlines' then autonumlines:=pvalue='true'
+      else
+      if pname='savepreparedsource' then savepreparedsource:=pvalue='true'
       else
         ExitWithError('Unknown parameter: '+pname,5) ;
     end;
@@ -74,10 +85,31 @@ begin
     Writeln('Reading Basic file...') ;
     script:=TStringList.Create() ;
     script.LoadFromFile(ParamStr(1),srcenc) ;
+
+    i:=0 ;
+    while i<script.Count do begin
+      s:=script[i] ;
+      if s.Trim().Length=0 then script.Delete(i) else
+      if s.Trim().StartsWith('''') then script.Delete(i) else
+      Inc(i) ;
+    end;
+
+    if autonumlines then begin
+      ln:=TLineNumerator.Create(script) ;
+      newlines:=ln.getNumeratedLines() ;
+      if (newlines) then begin
+        script.Free ;
+        script:=newlines.Value ;
+      end
+      else
+        ExitWithError('Error enumerate lines: '+ln.getErrMsg(),10) ;
+      ln.Free ;
+    end;
+
+    if savepreparedsource then script.SaveToFile(ParamStr(1)+'.tmp',srcenc) ;
+
     data:=TList<Byte>.Create() ;
     for s in script do begin
-      if s.Trim().Length=0 then Continue ;
-      if s.Trim().StartsWith('''') then Continue ;
       data.AddRange(TEncoding.GetEncoding(20866).GetBytes(s.Trim())) ;
       data.Add($0A) ;
     end;

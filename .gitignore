@@ -65,3 +65,4 @@ __recovery/
 *.stat
 
 build/i386-win32
+*.tmp

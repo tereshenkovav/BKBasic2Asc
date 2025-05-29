@@ -1,0 +1,12 @@
+' Comment
+PRINT "Basic program"
+
+' Tabulation
+BEEP
+
+' Space string
+FOR I%=1 TO 5
+PRINT I%
+BEEP
+NEXT I%
+END
