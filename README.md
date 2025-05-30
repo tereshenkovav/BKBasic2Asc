@@ -51,7 +51,7 @@ PRINT "Basic program with auto line nums"
 ' Блоки со ссылками для тестирования
 LabData: DATA 1,2,3
 Label1: PRINT "Line with LABEL1"
-LABEL2: PRINT "Line with LABEL3"
+LABEL2: PRINT "Line with LABEL2"
 LaBeL3: PRINT "Line with LABEL3"
 label4: PRINT "Line with LABEL4"
 
@@ -63,7 +63,9 @@ ON I% GOSUB LABEL1,label2
 ON I% GOTO LABEL3, label4
 IF I%=1 THEN GOTO Label1   ELSE  GOSUB LABEL4
 
-' Конец блоков
+' Конец программы и пара пустых строк
+
+
 END
 ```
 
@@ -72,7 +74,7 @@ END
 10 PRINT "Basic program with auto line nums"
 20 DATA 1,2,3
 30 PRINT "Line with LABEL1"
-40 PRINT "Line with LABEL3"
+40 PRINT "Line with LABEL2"
 50 PRINT "Line with LABEL3"
 60 PRINT "Line with LABEL4"
 70 RESTORE 20
