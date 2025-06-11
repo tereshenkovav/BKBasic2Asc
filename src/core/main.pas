@@ -188,10 +188,15 @@ end ;
 
 function TMain.StripCommentFromLine(const line: string): string;
 var i:Integer ;
+    instring:Boolean ;
 begin
-  for i := 0 to line.Length-1 do
-    if (line[i]='''')or (line.Substring(i,3).ToUpper()='REM') then
-      Exit(line.Substring(0,i-1)) ;
+  instring:=False ;
+  for i := 0 to line.Length-1 do begin
+    if line[i]='"' then instring:=not instring ;
+    if not instring then
+      if (line[i]='''')or (line.Substring(i,3).ToUpper()='REM') then
+        Exit(line.Substring(0,i-1)) ;
+  end;
   Result:=line ;
 end;
 
