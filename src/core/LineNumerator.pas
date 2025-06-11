@@ -69,7 +69,7 @@ begin
 end ;
 
 function TLineNumerator.getNumeratedLines: TOptional<TStringList>;
-var s,str,lab:string ;
+var s,str,lab,cmd:string ;
     p,i,num:Integer ;
     newlines:TStringList ;
     labs:TDictionary<string,Integer> ;
@@ -80,18 +80,24 @@ begin
   newlines:=TStringList.Create ;
   labs:=TDictionary<string,Integer>.Create ;
   num:=STEP ;
-  for s in lines do begin
-    str:=s ;
-    p:=str.IndexOf(':') ;
+  i:=0 ;
+  while i<lines.Count do begin
+    cmd:=lines[i].Trim() ;
+    p:=lines[i].IndexOf(':') ;
     if p<>-1 then begin
-      lab:=str.Substring(0,p).ToUpper().Trim() ;
+      lab:=lines[i].Substring(0,p).ToUpper().Trim() ;
       if isStrContainsOnlyChars(lab,LABSYMS) then begin
         labs.Add(lab,num) ;
-        str:=str.Remove(0,p+1).Trim() ;
-      end;
+        cmd:=lines[i].Remove(0,p+1).Trim() ;
+        if cmd='' then begin
+          Inc(i) ;
+          if i<lines.Count then cmd:=lines[i].Trim() ;
+        end ;
+      end ;
     end ;
-    newlines.Add(Format('%d %s',[num,str.Trim()])) ;
+    newlines.Add(Format('%d %s',[num,cmd])) ;
     Inc(num,STEP) ;
+    Inc(i) ;
   end;
 
   for i := 0 to newlines.Count-1 do begin

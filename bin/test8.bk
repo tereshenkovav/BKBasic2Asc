@@ -4,9 +4,17 @@ PRINT "Basic program with auto line nums"
 ' Блоки со ссылками для тестирования
 LabData: DATA 1,2,3
 Label1: PRINT "Line with LABEL1"
-LABEL2: PRINT "Line with LABEL2"
+
+' Висящая строка метки
+LABEL2:
+PRINT "Line with LABEL2"
+
 LaBeL3: PRINT "Line with LABEL3"
-label4: PRINT "Line with LABEL4"
+
+' Еще висящая строка метки с пустой строкой после
+label4:
+
+PRINT "Line with LABEL4"
 
 ' Использование ссылок во всех конструкциях
 RESTORE LabData
@@ -16,7 +24,12 @@ ON I% GOSUB LABEL1,label2
 ON I% GOTO LABEL3, label4
 IF I%=1 THEN GOTO Label1   ELSE  GOSUB LABEL4
 
-' Конец программы и пара пустых строк
+' Переход на метку вперед
+GOTO FINALLAB
 
+BEEP
+
+FINALLAB:
+' Конец программы и пара пустых строк
 
 END
