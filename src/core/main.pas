@@ -6,6 +6,7 @@ uses SysUtils, Classes ;
 type
   TMain = class
   private
+    function StripCommentFromLine(const line:string):string ;
     procedure ExitWithError(const msg: string; code: Integer);
   public
     procedure Run() ;
@@ -95,10 +96,8 @@ begin
 
     i:=0 ;
     while i<script.Count do begin
-      s:=script[i] ;
-      if s.Trim().Length=0 then script.Delete(i) else
-      if s.Trim().StartsWith('''') then script.Delete(i) else
-      Inc(i) ;
+      script[i]:=StripCommentFromLine(script[i]).Trim() ;
+      if script[i].Length=0 then script.Delete(i) else Inc(i) ;
     end;
 
     if autonumlines then begin
@@ -186,5 +185,14 @@ begin
       Writeln('Error '+E.ClassName+': '+E.Message);
   end;
 end ;
+
+function TMain.StripCommentFromLine(const line: string): string;
+var i:Integer ;
+begin
+  for i := 0 to line.Length-1 do
+    if (line[i]='''')or (line.Substring(i,3).ToUpper()='REM') then
+      Exit(line.Substring(0,i-1)) ;
+  Result:=line ;
+end;
 
 end.
