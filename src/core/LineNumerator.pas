@@ -75,6 +75,7 @@ var s,str,lab,cmd:string ;
     labs:TDictionary<string,Integer> ;
     goidx:TList<Integer> ;
     elseidx:Integer ;
+    instring:Boolean ;
 const STEP = 10 ;
 begin
   newlines:=TStringList.Create ;
@@ -104,7 +105,10 @@ begin
     str:=newlines[i] ;
     goidx:=TList<Integer>.Create ;
     elseidx:=-1 ;
+    instring:=False ;
     for p := 0 to str.Length-1 do begin
+      if str[p]='"' then instring:=not instring ;
+      if instring then Continue ;
       if str.ToUpper().Substring(p,6)=' GOTO ' then goidx.Add(p+6) ;
       if str.ToUpper().Substring(p,7)=' GOSUB ' then goidx.Add(p+7) ;
       if str.ToUpper().Substring(p,9)=' RESTORE ' then goidx.Add(p+9) ;

@@ -22,7 +22,18 @@ GOTO  Label1
 GOSUB Label2  
 ON I% GOSUB LABEL1,label2
 ON I% GOTO LABEL3, label4
+
+' Смешанные конструкции
 IF I%=1 THEN GOTO Label1   ELSE  GOSUB LABEL4
+IF A%=2 THEN PRINT "2"   ELSE  GOSUB LABEL4
+IF A%=3 THEN GOTO Label1   ELSE  PRINT "3"
+
+' Корректная обработка ключевых слов в строках Бейсика
+IF I%=1 THEN PRINT " GOTO Label1"   ELSE  GOSUB LABEL4
+IF I%=1 THEN GOTO Label1   ELSE  PRINT " GOSUB LABEL4"
+IF I%=1 THEN PRINT " GOTO Label1"   ELSE  PRINT " GOSUB LABEL4"
+IF I%=1 THEN PRINT " GOTO Label1   ELSE  GOSUB LABEL4"
+? "IF I%=1 THEN GOTO Label1   ELSE  GOSUB LABEL4"
 
 ' Переход на метку вперед
 GOTO FINALLAB
