@@ -105,6 +105,7 @@
         </DelphiCompile>
         <DCCReference Include="core\LineNumerator.pas"/>
         <DCCReference Include="core\Optional.pas"/>
+        <DCCReference Include="core\WavMaker.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

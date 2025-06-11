@@ -5,7 +5,8 @@ program BKBasic2Asc;
 uses
   main,
   LineNumerator in 'core\LineNumerator.pas',
-  Optional in 'core\Optional.pas';
+  Optional in 'core\Optional.pas',
+  WavMaker in 'core\WavMaker.pas';
 
 begin
   with TMain.Create() do begin

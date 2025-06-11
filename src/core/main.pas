@@ -12,14 +12,15 @@ type
   end;
 
 implementation
-uses Generics.Collections, Math, LineNumerator, Optional ;
+uses Generics.Collections, Math, LineNumerator, Optional, WavMaker ;
 
 const MAINHELP = 'Converter from Basic for BK-0010 to ASC-file for GID emulator'#13#10+
   'Usage: Basic_filename Asc_filename [parameters]'#13#10+
   'Parameters:'#13#10+
   '/basiccodepage=utf8|win1251|koi8r|oem866 - convert Basic file from codepage'#13#10+
   '/autonumlines=true|false - set line numbers to non-numbered Basic source'#13#10+
-  '/savepreparedsource=true|false - save cleared and autonumbered (if use) source to .tmp file' ;
+  '/savepreparedsource=true|false - save cleared and autonumbered (if use) source to .tmp file'#13#10+
+  '/makewav=true|false - save cleared and autonumbered (if use) source to .tmp file' ;
 
 ASC_NAME_LENGTH = 6 ;
 HEADER_SIZE = 4 ;
@@ -37,12 +38,15 @@ var script:TStringList ;
     i,j,p,filecnt,blocksize:Integer ;
     destfile,binfile:string ;
     srcenc:TEncoding ;
+    makewav:Boolean ;
     data:TList<Byte> ;
     stm:TFileStream ;
     buf:TBytes ;
     ln:TLineNumerator ;
     autonumlines,savepreparedsource:Boolean ;
     newlines:TOptional<TStringList> ;
+    wm:TWavMaker ;
+    wavname:string ;
 begin
   try
     if ParamCount<1 then ExitWithError(MAINHELP,1) ;
@@ -50,6 +54,7 @@ begin
     srcenc:=TEncoding.UTF8 ;
     autonumlines:=False ;
     savepreparedsource:=False ;
+    makewav:=False ;
     for i := 3 to ParamCount do begin
       if ParamStr(i)[1]<>'/' then ExitWithError('Unknown argument: '+ParamStr(i)+', use /name=value',2) ;
       p:=ParamStr(i).IndexOf('=') ;
@@ -68,6 +73,8 @@ begin
       if pname='autonumlines' then autonumlines:=pvalue='true'
       else
       if pname='savepreparedsource' then savepreparedsource:=pvalue='true'
+      else
+      if pname='makewav' then makewav:=pvalue='true'
       else
         ExitWithError('Unknown parameter: '+pname,5) ;
     end;
@@ -116,17 +123,20 @@ begin
     data.Add($1A) ;
     script.Free ;
 
-    Writeln('Writeln Asc files...') ;
+    if makewav then
+      Writeln('Writeln Wav file...')
+    else
+      Writeln('Writeln Asc files...') ;
 
     if not destfile.ToLower().EndsWith('.asc') then destfile:=destfile+'.asc' ;
 
     filecnt:=data.Count div MAX_BLOCK_SIZE ;
     if data.Count mod MAX_BLOCK_SIZE<>0 then Inc(filecnt) ;
 
-    for i := 0 to filecnt-1 do begin
-      binfile:=Format('%s #%.3d.bin',[destfile,i]) ;
-      if FileExists(binfile) then SysUtils.DeleteFile(binfile) ;
+    wm:=TWavMaker.Create() ;
+    wavname:=ExtractFileName(destfile.ToUpper()) ;
 
+    for i := 0 to filecnt-1 do begin
       blocksize:=IfThen(i=filecnt-1,data.Count-(filecnt-1)*MAX_BLOCK_SIZE,MAX_BLOCK_SIZE) ;
       SetLength(buf,blocksize+HEADER_SIZE) ;
       buf[0]:=$EE ;
@@ -135,17 +145,39 @@ begin
       buf[3]:=Byte(blocksize div MAX_BLOCK_SIZE) ;
       for j := 0 to blocksize-1 do
         buf[HEADER_SIZE+j]:=data[i*MAX_BLOCK_SIZE+j] ;
+
+      if makewav then
+        wm.AppendBinData(buf,Format('%s #%.3d',[wavname,i])+Chr(26))
+      else begin
+        binfile:=Format('%s #%.3d.bin',[destfile,i]) ;
+        if FileExists(binfile) then SysUtils.DeleteFile(binfile) ;
+
+        stm:=TFileStream.Create(binfile,fmCreate) ;
+        stm.WriteBuffer(buf[0],Length(buf)) ;
+        stm.Free ;
+      end;
+    end;
+
+    SetLength(buf,6) ;
+    buf[0]:=$EE ;
+    buf[1]:=$3D ;
+    buf[2]:=Byte(2) ;
+    buf[3]:=Byte(0) ;
+    buf[4]:=Byte(0) ;
+    buf[5]:=Byte(0) ;
+
+    if makewav then begin
+      wm.AppendBinData(buf,wavname+Chr(32)+Chr(32)+StringOfChar(Chr(0),4)) ;
+      wm.WriteToWav(destfile+'.wav') ;
+    end
+    else begin
+      binfile:=destfile+'.bin' ;
+      if FileExists(binfile) then SysUtils.DeleteFile(binfile) ;
+
       stm:=TFileStream.Create(binfile,fmCreate) ;
       stm.WriteBuffer(buf[0],Length(buf)) ;
       stm.Free ;
-
     end;
-
-    binfile:=destfile+'.bin' ;
-    if FileExists(binfile) then SysUtils.DeleteFile(binfile) ;
-
-    stm:=TFileStream.Create(binfile,fmCreate) ;
-    stm.Free ;
 
     data.Free ;
 
