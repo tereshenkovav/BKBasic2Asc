@@ -13,15 +13,16 @@ type
   end;
 
 implementation
-uses Generics.Collections, Math, LineNumerator, Optional, WavMaker ;
+uses Generics.Collections, Math, LineNumerator, Optional, WavMaker, Version ;
 
 const MAINHELP = 'Converter from Basic for BK-0010 to ASC-file for GID emulator'#13#10+
+  'Version: '+TGitVersion.TAG+#13#10+
   'Usage: Basic_filename Asc_filename [parameters]'#13#10+
   'Parameters:'#13#10+
   '/basiccodepage=utf8|win1251|koi8r|oem866 - convert Basic file from codepage'#13#10+
   '/autonumlines=true|false - set line numbers to non-numbered Basic source'#13#10+
   '/savepreparedsource=true|false - save cleared and autonumbered (if use) source to .tmp file'#13#10+
-  '/makewav=true|false - save cleared and autonumbered (if use) source to .tmp file' ;
+  '/makewav=true|false - convert Basic program to WAV file for load into BK-0010 computer' ;
 
 ASC_NAME_LENGTH = 6 ;
 HEADER_SIZE = 4 ;
@@ -177,6 +178,9 @@ begin
       stm.WriteBuffer(buf[0],Length(buf)) ;
       stm.Free ;
     end;
+
+    Writeln('File(s) written, use LOAD "'+
+      wavname.Replace('.ASC','').Trim()+'" for loading BASIC program') ;
 
     data.Free ;
 
