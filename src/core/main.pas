@@ -4,9 +4,13 @@ interface
 uses SysUtils, Classes ;
 
 type
+  TDefBlockState = (dbsNone,dbsThen,dbsElse) ;
+  TDefBlockCommand = (dbcNone,dbcDefine,dbcElse,dbcEnd) ;
+
   TMain = class
   private
     function StripCommentFromLine(const line:string):string ;
+    function GetDefineCommandFromLine(const line:string; var defname:string):TDefBlockCommand ;
     procedure ExitWithError(const msg: string; code: Integer);
   public
     procedure Run() ;
@@ -22,7 +26,9 @@ const MAINHELP = 'Converter from Basic for BK-0010 to ASC-file for GID emulator'
   '/basiccodepage=utf8|win1251|koi8r|oem866 - convert Basic file from codepage'#13#10+
   '/autonumlines=true|false - set line numbers to non-numbered Basic source'#13#10+
   '/savepreparedsource=true|false - save cleared and autonumbered (if use) source to .tmp file'#13#10+
-  '/makewav=true|false - convert Basic program to WAV file for load into BK-0010 computer' ;
+  '/makewav=true|false - convert Basic program to WAV file for load into BK-0010 computer'#13#10+
+  '/define=name - set name for ''$IFDEF directive' ;
+
 
 ASC_NAME_LENGTH = 6 ;
 HEADER_SIZE = 4 ;
@@ -32,6 +38,18 @@ procedure TMain.ExitWithError(const msg: string; code: Integer);
 begin
   Writeln(msg) ;
   Halt(code) ;
+end;
+
+function TMain.GetDefineCommandFromLine(const line: string;
+  var defname: string): TDefBlockCommand;
+begin
+  Result:=dbcNone ;
+  if line.Trim().IndexOf('''$IFDEF')=0 then begin
+    Result:=dbcDefine ;
+    defname:=line.Replace('''$IFDEF','').Trim().ToUpper() ;
+  end;
+  if line.Trim().IndexOf('''$ELSE')=0 then Result:=dbcElse ;
+  if line.Trim().IndexOf('''$ENDIF')=0 then Result:=dbcEnd ;
 end;
 
 procedure TMain.Run() ;
@@ -49,10 +67,14 @@ var script:TStringList ;
     newlines:TOptional<TStringList> ;
     wm:TWavMaker ;
     wavname:string ;
+    deflist:TStringList ;
+    currentdefblock:string ;
+    currentdefblockstate:TDefBlockState ;
 begin
   try
     if ParamCount<1 then ExitWithError(MAINHELP,1) ;
 
+    deflist:=TStringList.Create ;
     srcenc:=TEncoding.UTF8 ;
     autonumlines:=False ;
     savepreparedsource:=False ;
@@ -78,6 +100,8 @@ begin
       else
       if pname='makewav' then makewav:=pvalue='true'
       else
+      if pname='define' then deflist.Add(pvalue.ToUpper())
+      else
         ExitWithError('Unknown parameter: '+pname,5) ;
     end;
 
@@ -96,9 +120,33 @@ begin
     script.LoadFromFile(ParamStr(1),srcenc) ;
 
     i:=0 ;
+    currentdefblock:='' ;
+    currentdefblockstate:=dbsNone ;
     while i<script.Count do begin
+      case GetDefineCommandFromLine(script[i],currentdefblock) of
+        dbcDefine:
+          if currentdefblockstate=dbsNone then
+            currentdefblockstate:=dbsThen
+          else
+            ExitWithError('Multilevel $IFDEF not supported yet',1) ;
+        dbcElse:
+          if currentdefblockstate=dbsThen then
+            currentdefblockstate:=dbsElse
+          else
+            ExitWithError('$ELSE without $IFDEF',1) ;
+        dbcEnd:
+          if currentdefblockstate in [dbsThen,dbsElse] then
+            currentdefblockstate:=dbsNone
+          else
+            ExitWithError('$ENDIF without $ELSE or $IDFEF',1) ;
+      end;
       script[i]:=StripCommentFromLine(script[i]).Trim() ;
-      if script[i].Length=0 then script.Delete(i) else Inc(i) ;
+      if script[i].Length=0 then script.Delete(i) else
+      if (currentdefblockstate=dbsThen)and
+        (deflist.IndexOf(currentdefblock)=-1) then script.Delete(i) else
+      if (currentdefblockstate=dbsElse)and
+        (deflist.IndexOf(currentdefblock)<>-1) then script.Delete(i) else
+         Inc(i) ;
     end;
 
     if autonumlines then begin
@@ -183,6 +231,7 @@ begin
       wavname.Replace('.ASC','').Trim()+'" for loading BASIC program') ;
 
     data.Free ;
+    deflist.Free ;
 
   except
     on E: Exception do
