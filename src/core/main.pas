@@ -9,9 +9,11 @@ type
 
   TMain = class
   private
+    srcenc:TEncoding ;
     function StripCommentFromLine(const line:string):string ;
     function GetDefineCommandFromLine(const line:string; var defname:string):TDefBlockCommand ;
     procedure ExitWithError(const msg: string; code: Integer);
+    function LoadSourceFile(const filename:string):TStringList ;
   public
     procedure Run() ;
   end;
@@ -52,12 +54,36 @@ begin
   if line.Trim().IndexOf('''$ENDIF')=0 then Result:=dbcEnd ;
 end;
 
+function TMain.LoadSourceFile(const filename: string): TStringList;
+var i:Integer ;
+    j:Integer ;
+    incfile:string ;
+    included:TStringList ;
+begin
+  Result:=TStringList.Create() ;
+  Result.LoadFromFile(filename,srcenc) ;
+  i:=0 ;
+  while i<Result.Count do begin
+    if Result[i].Trim().IndexOf('''$INCLUDE:')=0 then begin
+      incfile:=Result[i].Replace('''$INCLUDE:','').Replace('''','').Trim() ;
+      if not FileExists(incfile) then ExitWithError('Not found included file: '+incfile,1) ;
+      Result.Delete(i) ;
+      included:=LoadSourceFile(incfile) ;
+      for j:=0 to included.Count-1 do
+        Result.Insert(i+j,included[j]) ;
+      included.Free ;
+    end
+    else
+      Inc(i) ;
+  end ;
+
+end;
+
 procedure TMain.Run() ;
 var script:TStringList ;
     s,pname,pvalue:string ;
     i,j,p,filecnt,blocksize:Integer ;
     destfile,binfile:string ;
-    srcenc:TEncoding ;
     makewav:Boolean ;
     data:TList<Byte> ;
     stm:TFileStream ;
@@ -116,9 +142,11 @@ begin
     destfile:=ParamStr(2)+StringOfChar(' ',ASC_NAME_LENGTH-Length(ExtractFileName(destfile))) ;
 
     Writeln('Reading Basic file...') ;
-    script:=TStringList.Create() ;
-    script.LoadFromFile(ParamStr(1),srcenc) ;
 
+    // Загрузка файла с учетом включаемых файлов
+    script:=loadSourceFile(ParamStr(1)) ;
+
+    // Обработка условных директив и удаление комментариев
     i:=0 ;
     currentdefblock:='' ;
     currentdefblockstate:=dbsNone ;

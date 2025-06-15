@@ -1,0 +1,6 @@
+' Проверка включаемых файлов
+PRINT "Test included files"
+GOSUB HelloAndBeep
+END
+'$INCLUDE: 'hello_and_beep.bi'
+PRINT "End of file"

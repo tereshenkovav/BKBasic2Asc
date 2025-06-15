@@ -113,3 +113,28 @@ PRINT "BK11 is not defined"
 10 PRINT "BK10 is defined"
 20 PRINT "BK11 is not defined"
 ```
+
+# Пример использования включаемых файлов вместе с автонумерацией
+
+Исходный файл:
+``` BASIC
+PRINT "Test included file"
+'$INCLUDE: 'beep3.bi'
+PRINT "Test OK"
+```
+
+Включаемый файл beep3.bi:
+``` BASIC
+BEEP
+BEEP
+BEEP
+```
+
+Подготовленный файл для сохранения в цепочку ASC-файлов:
+``` BASIC
+10 PRINT "Test included file"
+20 BEEP
+30 BEEP
+40 BEEP
+50 PRINT "Test OK"
+```
