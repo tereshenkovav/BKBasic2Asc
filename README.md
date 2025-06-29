@@ -140,3 +140,23 @@ BEEP
 40 BEEP
 50 PRINT "Test OK"
 ```
+
+# Инструкция по сборке
+
+Версия для Delphi компилируется через открытие проекта. Для сборки версии
+FreePascal, нужно запустить пакетный файл из каталога `build`.
+Для компиляции проекта нужно добавить в каталог `src` файл версии `Version.pas`.
+При работе из репозитория git данный файл создаётся вызовом скрипта
+`scripts\update_version.bat`, в противном случае его нужно создать самому по примеру:
+
+```PASCAL
+unit Version ;
+interface
+type TGitVersion = class
+const COMMIT = 'd6aac25e';
+const BRANCH = 'main';
+const TAG = 'v1.0.0';
+end ;
+implementation
+end.
+```
