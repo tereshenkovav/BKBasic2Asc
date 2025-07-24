@@ -10,10 +10,12 @@ type
   TMain = class
   private
     srcenc:TEncoding ;
+    autonumlines:Boolean ;
     function StripCommentFromLine(const line:string):string ;
     function GetDefineCommandFromLine(const line:string; var defname:string):TDefBlockCommand ;
     procedure ExitWithError(const msg: string; code: Integer);
     function LoadSourceFile(const filename:string):TStringList ;
+    procedure UpdateParamsByPragmasFromSourceFile(const filename:string) ;
   public
     procedure Run() ;
   end;
@@ -89,7 +91,7 @@ var script:TStringList ;
     stm:TFileStream ;
     buf:TBytes ;
     ln:TLineNumerator ;
-    autonumlines,savepreparedsource:Boolean ;
+    savepreparedsource:Boolean ;
     newlines:TOptional<TStringList> ;
     wm:TWavMaker ;
     wavname:string ;
@@ -105,6 +107,10 @@ begin
     autonumlines:=False ;
     savepreparedsource:=False ;
     makewav:=False ;
+
+    // Прагмы проверяем в начале, потому что у аргументов командной строки - приоритет
+    UpdateParamsByPragmasFromSourceFile(ParamStr(1)) ;
+
     for i := 3 to ParamCount do begin
       if ParamStr(i)[1]<>'/' then ExitWithError('Unknown argument: '+ParamStr(i)+', use /name=value',2) ;
       p:=ParamStr(i).IndexOf('=') ;
@@ -279,6 +285,24 @@ begin
         Exit(line.Substring(0,i-1)) ;
   end;
   Result:=line ;
+end;
+
+procedure TMain.UpdateParamsByPragmasFromSourceFile(const filename: string);
+var s,pragma:string ;
+    lines:TStringList ;
+begin
+  lines:=TStringList.Create() ;
+  lines.LoadFromFile(filename,TEncoding.GetEncoding(866)) ;
+  for s in lines do
+    if s.Trim().ToUpper().IndexOf('''$PRAGMA:')=0 then begin
+      pragma:=s.Trim().ToUpper().Replace('''$PRAGMA:','').Replace('''','').Trim() ;
+      if pragma='UTF8' then srcenc:=TEncoding.UTF8 ;
+      if pragma='WIN1251' then srcenc:=TEncoding.GetEncoding(1251) ;
+      if pragma='OEM866' then srcenc:=TEncoding.GetEncoding(866) ;
+      if pragma='KOI8R' then srcenc:=TEncoding.GetEncoding(20866) ;
+      if pragma='AUTONUMLINES' then autonumlines:=True ;
+    end ;
+  lines.Free ;
 end;
 
 end.
