@@ -1,4 +1,10 @@
-unit Optional;
+п»їunit Optional;
+
+///  Р¤Р°Р№Р» РІР·СЏС‚ РёР· Р±РёР±Р»РёРѕС‚РµРєРё TAVPascalLib, РєРѕРјРјРёС‚ 8145b050
+
+{
+   Р РµР°Р»РёР·Р°С†РёСЏ СЃС‚СЂСѓРєС‚СѓСЂС‹-Р°РЅР°Р»РѕРіР° std::nullopt РІ C++
+}
 
 interface
 
@@ -11,9 +17,9 @@ type
     class operator Implicit(a:TOptional<T>):Boolean  ; overload ;
     class operator Implicit(a:T):TOptional<T> ; overload ;
     {
-    Это не будет работать в FPC, есть баг
+    Р­С‚Рѕ РЅРµ Р±СѓРґРµС‚ СЂР°Р±РѕС‚Р°С‚СЊ РІ FPC, РµСЃС‚СЊ Р±Р°Рі
     https://gitlab.com/freepascal.org/fpc/source/-/issues/40256
-    так что для FPC вместо прямого преобразования всегда используем Value
+    С‚Р°Рє С‡С‚Рѕ РґР»СЏ FPC РІРјРµСЃС‚Рѕ РїСЂСЏРјРѕРіРѕ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ РІСЃРµРіРґР° РёСЃРїРѕР»СЊР·СѓРµРј Value
     }
     {$ifndef fpc}
     class operator Implicit(a:TOptional<T>):T  ; overload ;
