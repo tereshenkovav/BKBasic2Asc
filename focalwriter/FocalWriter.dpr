@@ -14,7 +14,6 @@ type
     command:string ;
   end;
 
-// Получение представления второй части номера строки как байта
 function getFocalFloatAsByte(ff:Integer):Byte ;
 begin
   Result:=Trunc(256*((ff)/100)) ;
@@ -24,7 +23,7 @@ procedure DoWriteFocal(const prog:TStringList; const binfile:string) ;
 var stm:TFileStream ;
     head,buf,bufnum:TBytes ;
     s:string ;
-    i,j,cnt,size:Integer ;
+    i,j,k,cnt,size:Integer ;
     start:Cardinal ;
 
     lines:TList<TFocalLine> ;
@@ -32,8 +31,24 @@ var stm:TFileStream ;
     fl:TFocalLine ;
 
 const TERM = $8E ; // Конец строки Фокала
-      FOCALSPACE = $80 ; // Пробел в Фокале
-      PARITYADD = $00 ; // Добаление в конце строки для четности
+      PARITYADD = $00 ; // Добавление в конце строки для четности
+
+// Замены символов в Фокале
+const REPLACEMENTS:array [0..12,0..1] of Byte = (
+   (ord(' '),$80),
+   (ord('+'),$81),
+   (ord('-'),$82),
+   (ord('/'),$83),
+   (ord('*'),$84),
+   (ord('^'),$85),
+   (ord('('),$86),
+   (ord('['),$87),
+   (ord(')'),$89),
+   (ord(']'),$8A),
+   (ord(','),$8C),
+   (ord(';'),$8D),
+   (ord('='),$8F)
+   ) ;
 
 begin
   lines:=TList<TFocalLine>.Create ;
@@ -78,9 +93,11 @@ begin
 
   for i:=0 to lines.count-1 do begin
     buf:=TEncoding.ANSI.GetBytes(lines[i].command) ;
-    // Замена пробелов на фокальные
+    // Замена символов на фокальные
     for j := 0 to Length(buf)-1 do
-      if buf[j]=32 then buf[j]:=FOCALSPACE ;
+      for k := 0 to Length(REPLACEMENTS)-1 do
+        if buf[j]=REPLACEMENTS[k,0] then buf[j]:=REPLACEMENTS[k,1] ;
+
     // Добивка до четности
     if Length(buf) mod 2 = 0 then begin
       SetLength(buf,Length(buf)+2) ;
