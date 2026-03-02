@@ -1,0 +1,136 @@
+program FocalWriter;
+
+{$APPTYPE CONSOLE}
+
+{$R *.res}
+
+uses
+  System.SysUtils, Classes, Generics.Collections;
+
+type
+  TFocalLine = record
+    num1:Integer ;
+    num2:Integer ;
+    command:string ;
+  end;
+
+// Получение представления второй части номера строки как байта
+function getFocalFloatAsByte(ff:Integer):Byte ;
+begin
+  Result:=Trunc(256*((ff)/100)) ;
+end;
+
+procedure DoWriteFocal(const prog:TStringList; const binfile:string) ;
+var stm:TFileStream ;
+    head,buf,bufnum:TBytes ;
+    s:string ;
+    i,j,cnt,size:Integer ;
+    start:Cardinal ;
+
+    lines:TList<TFocalLine> ;
+    tmp:TArray<string> ;
+    fl:TFocalLine ;
+
+const TERM = $8E ; // Конец строки Фокала
+      FOCALSPACE = $80 ; // Пробел в Фокале
+      PARITYADD = $00 ; // Добаление в конце строки для четности
+
+begin
+  lines:=TList<TFocalLine>.Create ;
+  for s in prog do begin
+    tmp:=Trim(s).Split([' '],TStringSplitOptions.ExcludeEmpty) ;
+    fl.command:=Trim(Trim(s).Substring(tmp[0].Length)) ;
+    tmp:=tmp[0].Split(['.']) ;
+    fl.num1:=StrToInt(tmp[0]) ;
+    if tmp[1].Length=1 then tmp[1]:=tmp[1]+'0' ;
+    fl.num2:=StrToInt(tmp[1]) ;
+    lines.Add(fl) ;
+  end;
+
+  // Расчет размера для заголовка
+  size:=22 ;
+  for fl in lines do begin
+    cnt:=TEncoding.ANSI.GetByteCount(fl.command) ;
+    Inc(size,cnt+5) ;
+    // Коррекция на четность
+    if cnt mod 2 = 0 then Inc(size) ;
+  end;
+
+  // Заголовок с константами и размером
+  SetLength(head,26) ;
+  head[0]:=$EA ;
+  head[1]:=$03 ;
+  head[2]:=Byte(size mod 256) ;
+  head[3]:=Byte(size div 256) ;
+  head[4]:=$14 ; head[5]:=$00 ; head[6]:=$00 ; head[7]:=$00 ;
+
+  head[8]:=ord('C') ; head[9]:=ord(':') ;  head[10]:=$20 ; head[11]:=$20 ;
+  head[12]:=$E6 ; head[13]:=$EF ; head[14]:=$EB ; head[15]:=$E1 ;
+  head[16]:=$EC ; head[17]:=$2D ; head[18]:=$E2 ; head[19]:=$EB ;
+  head[20]:=$30 ; head[21]:=$30 ; head[22]:=$31 ; head[23]:=$30 ;
+  head[24]:=TERM ; head[25]:=PARITYADD ;
+
+  SetLength(bufnum,4) ;
+  start:=$FBFE ; // Магическое число размера файла для контрольной суммы
+
+  stm:=TFileStream.Create(binfile,fmCreate) ;
+  stm.WriteBuffer(head,Length(head)) ;
+
+  for i:=0 to lines.count-1 do begin
+    buf:=TEncoding.ANSI.GetBytes(lines[i].command) ;
+    // Замена пробелов на фокальные
+    for j := 0 to Length(buf)-1 do
+      if buf[j]=32 then buf[j]:=FOCALSPACE ;
+    // Добивка до четности
+    if Length(buf) mod 2 = 0 then begin
+      SetLength(buf,Length(buf)+2) ;
+      buf[Length(buf)-2]:=TERM ;
+      buf[Length(buf)-1]:=PARITYADD ;
+    end
+    else begin
+      SetLength(buf,Length(buf)+1) ;
+      buf[Length(buf)-1]:=TERM ;
+    end;
+
+    // Либо контрольная сумма для последней строки, либо длина строки
+    if i=prog.count-1 then begin
+      bufnum[0]:=Byte(start mod 256);
+      bufnum[1]:=Byte(start div 256);
+    end
+    else begin
+      bufnum[0]:=Length(buf)+2 ;
+      bufnum[1]:=$00 ;
+    end;
+    bufnum[2]:=getFocalFloatAsByte(lines[i].num2) ;
+    bufnum[3]:=Byte(lines[i].num1) ;
+
+    // Обновление контрольной суммы
+    Dec(start,Length(buf)+4) ;
+
+    stm.WriteBuffer(bufnum,Length(bufnum)) ;
+    stm.WriteBuffer(buf,Length(buf)) ;
+  end;
+
+  stm.Free ;
+  lines.Free ;
+end;
+
+// Задачи: запрет на одинаковые строки и на строку с большим номером перед меньшим
+
+var prog:TStringList ;
+begin
+  try
+    if ParamCount<2 then begin
+      Writeln('Converter from Focal for BK-0010 to BIN-file for GID emulator') ;
+      Writeln('Usage: Focal_filename BIN_filename') ;
+      Halt(1) ;
+    end ;
+    prog:=TStringList.Create ;
+    prog.LoadFromFile(ParamStr(1)) ;
+    DoWriteFocal(prog,ParamStr(2)) ;
+    prog.Free ;
+  except
+    on E: Exception do
+      Writeln(E.ClassName, ': ', E.Message);
+  end;
+end.
