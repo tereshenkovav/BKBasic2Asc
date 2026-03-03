@@ -14,6 +14,22 @@ type
     command:string ;
   end;
 
+// Замены выражений в Фокале
+const COMMANDS_ALIAS:array [0..11,0..1] of string = (
+   ('ASK','A'),
+   ('COMMENT','C'),
+   ('DO','D'),
+   ('ERASE','E'),
+   ('SET','S'),
+   ('XECUTE','X'),
+   ('FOR','F'),
+   ('IF','I'),
+   ('GOTO','G'),
+   ('QUIT','Q'),
+   ('RETURN','R'),
+   ('TYPE','T')
+   ) ;
+
 function getFocalFloatAsByte(ff:Integer):Byte ;
 begin
   Result:=Trunc(256*((ff)/100)) ;
@@ -22,6 +38,7 @@ end;
 function CreateFocalProg(const prog:TStringList):TList<TFocalLine> ;
 var tmp:TArray<string> ;
     fl:TFocalLine ;
+    i:Integer ;
     s:string ;
 begin
   Result:=TList<TFocalLine>.Create ;
@@ -36,6 +53,18 @@ begin
     fl.num1:=StrToInt(tmp[0]) ;
     if tmp[1].Length=1 then tmp[1]:=tmp[1]+'0' ;
     fl.num2:=StrToInt(tmp[1]) ;
+
+    for i := 0 to Length(COMMANDS_ALIAS)-1 do begin
+      if fl.command.StartsWith(COMMANDS_ALIAS[i][0]+' ') then begin
+        fl.command:=COMMANDS_ALIAS[i][1]+' '+fl.command.Substring(Length(COMMANDS_ALIAS[i][0])+1) ;
+        Break ;
+      end;
+      if fl.command=COMMANDS_ALIAS[i][0] then begin
+        fl.command:=COMMANDS_ALIAS[i][1] ;
+        Break ;
+      end;
+    end;
+
     Result.Add(fl) ;
   end;
 end;
