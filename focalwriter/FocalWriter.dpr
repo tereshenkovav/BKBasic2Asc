@@ -19,15 +19,32 @@ begin
   Result:=Trunc(256*((ff)/100)) ;
 end;
 
-procedure DoWriteFocal(const prog:TStringList; const binfile:string) ;
+function CreateFocalProg(const prog:TStringList):TList<TFocalLine> ;
+var tmp:TArray<string> ;
+    fl:TFocalLine ;
+    s:string ;
+begin
+  Result:=TList<TFocalLine>.Create ;
+  for s in prog do begin
+    if Length(Trim(s))=0 then Continue ;
+    if Trim(s)[1]='#' then Continue ;
+    if Trim(s).Substring(0,2)='//' then Continue ;
+
+    tmp:=Trim(s).Split([' '],TStringSplitOptions.ExcludeEmpty) ;
+    fl.command:=Trim(Trim(s).Substring(tmp[0].Length)) ;
+    tmp:=tmp[0].Split(['.']) ;
+    fl.num1:=StrToInt(tmp[0]) ;
+    if tmp[1].Length=1 then tmp[1]:=tmp[1]+'0' ;
+    fl.num2:=StrToInt(tmp[1]) ;
+    Result.Add(fl) ;
+  end;
+end;
+
+procedure DoWriteFocal(const lines:TList<TFocalLine>; const binfile:string) ;
 var stm:TFileStream ;
     head,buf,bufnum:TBytes ;
-    s:string ;
     i,j,k,cnt,size:Integer ;
     start:Cardinal ;
-
-    lines:TList<TFocalLine> ;
-    tmp:TArray<string> ;
     fl:TFocalLine ;
 
 const TERM = $8E ; // Конец строки Фокала
@@ -51,16 +68,6 @@ const REPLACEMENTS:array [0..12,0..1] of Byte = (
    ) ;
 
 begin
-  lines:=TList<TFocalLine>.Create ;
-  for s in prog do begin
-    tmp:=Trim(s).Split([' '],TStringSplitOptions.ExcludeEmpty) ;
-    fl.command:=Trim(Trim(s).Substring(tmp[0].Length)) ;
-    tmp:=tmp[0].Split(['.']) ;
-    fl.num1:=StrToInt(tmp[0]) ;
-    if tmp[1].Length=1 then tmp[1]:=tmp[1]+'0' ;
-    fl.num2:=StrToInt(tmp[1]) ;
-    lines.Add(fl) ;
-  end;
 
   // Расчет размера для заголовка
   size:=22 ;
@@ -110,7 +117,7 @@ begin
     end;
 
     // Либо контрольная сумма для последней строки, либо длина строки
-    if i=prog.count-1 then begin
+    if i=lines.count-1 then begin
       bufnum[0]:=Byte(start mod 256);
       bufnum[1]:=Byte(start div 256);
     end
@@ -129,12 +136,12 @@ begin
   end;
 
   stm.Free ;
-  lines.Free ;
 end;
 
 // Задачи: запрет на одинаковые строки и на строку с большим номером перед меньшим
 
 var prog:TStringList ;
+    lines:TList<TFocalLine> ;
 begin
   try
     if ParamCount<2 then begin
@@ -144,7 +151,9 @@ begin
     end ;
     prog:=TStringList.Create ;
     prog.LoadFromFile(ParamStr(1)) ;
-    DoWriteFocal(prog,ParamStr(2)) ;
+    lines:=CreateFocalProg(prog) ;
+    DoWriteFocal(lines,ParamStr(2)) ;
+    lines.Free ;
     prog.Free ;
   except
     on E: Exception do
