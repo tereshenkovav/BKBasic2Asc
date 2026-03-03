@@ -35,6 +35,31 @@ begin
   Result:=Trunc(256*((ff)/100)) ;
 end;
 
+// Логика дублирует аналогичный метод в BKBasic2Asc
+function LoadSourceFile(const filename: string): TStringList;
+var i:Integer ;
+    j:Integer ;
+    incfile:string ;
+    included:TStringList ;
+begin
+  Result:=TStringList.Create() ;
+  Result.LoadFromFile(filename) ;
+  i:=0 ;
+  while i<Result.Count do begin
+    if Result[i].Trim().IndexOf('INCLUDE')=0 then begin
+      incfile:=Result[i].Replace('INCLUDE','').Trim() ;
+      Result.Delete(i) ;
+      included:=LoadSourceFile(incfile) ;
+      for j:=0 to included.Count-1 do
+        Result.Insert(i+j,included[j]) ;
+      included.Free ;
+    end
+    else
+      Inc(i) ;
+  end ;
+
+end;
+
 function CreateFocalProg(const prog:TStringList):TList<TFocalLine> ;
 var tmp:TArray<string> ;
     fl:TFocalLine ;
@@ -178,8 +203,7 @@ begin
       Writeln('Usage: Focal_filename BIN_filename') ;
       Halt(1) ;
     end ;
-    prog:=TStringList.Create ;
-    prog.LoadFromFile(ParamStr(1)) ;
+    prog:=LoadSourceFile(ParamStr(1)) ;
     lines:=CreateFocalProg(prog) ;
     DoWriteFocal(lines,ParamStr(2)) ;
     lines.Free ;
